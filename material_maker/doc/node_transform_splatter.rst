@@ -23,7 +23,7 @@ Outputs
 
 The **Splatter** node outputs the splat image.
 
-The greyscale splatter has a secondary output that assigns a random color to each splat instance.
+The greyscale splatter has two additional outputs, one that assigns a random color to each splat instance and one that assigns a UV layout to each splat instance.
 
 Parameters
 ++++++++++
@@ -37,6 +37,8 @@ The **Splatter** node accepts the following parameters:
 * *RndRotate* is the maximum angle of the random rotation applied to each instance.
 * *RndScale* is the amount of random scaling applied to each instance.
 * *RndValue* is the amount of random value applied to each instance.
+* *Variations*: if checked, the node will splat different variations of its input
+  (i.e. roll a different seed for each instance)
 
 Example images
 ++++++++++++++

@@ -27,6 +27,7 @@
 		},
 		"repeat": 1
 	},
+	"seed_int": 0,
 	"shader_model": {
 		"code": "",
 		"global": "",
@@ -35,6 +36,7 @@
 		],
 		"instance": "",
 		"name": "Circular Gradient",
+		"shortdesc": "Circular Gradient",
 		"outputs": [
 			{
 				"longdesc": "Number of repetitions of the gradient",
@@ -77,7 +79,7 @@
 					],
 					"type": "Gradient"
 				},
-				"label": "Gradient",
+				"label": "",
 				"longdesc": "Gradient to be spread on the image",
 				"name": "gradient",
 				"shortdesc": "Gradient",

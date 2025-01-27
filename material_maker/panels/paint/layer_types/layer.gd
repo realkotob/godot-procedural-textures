@@ -1,7 +1,9 @@
+class_name MMLayer
+
 var name : String
 var index : int
 var hidden : bool
-var layers : Array = []
+var layers : Array[MMLayer] = []
 
 const LAYER_NONE  : int = -1
 const LAYER_PAINT : int = 0
@@ -19,15 +21,18 @@ func duplicate():
 	layer.hidden = false
 	for c in get_channels():
 		var texture = ImageTexture.new()
-		texture.create_from_image(get(c).get_data())
+		texture.set_image(get(c).get_image())
 		layer.set(c, texture)
 	return layer
 
 
+func get_channel_texture(channel_name : String) -> Texture2D:
+	return get(channel_name)
+
 func get_channels() -> Array:
 	return []
 
-func _load_layer(data : Dictionary) -> void:
+func _load_layer(_data : Dictionary) -> void:
 	pass
 
 func load_layer(data : Dictionary, first_index : int, path : String) -> void:
@@ -39,12 +44,11 @@ func load_layer(data : Dictionary, first_index : int, path : String) -> void:
 	hidden = data.hidden
 	for c in get_channels():
 		if data.has(c):
-			var texture = ImageTexture.new()
-			texture.load(path+"/"+data[c])
+			var texture = ImageTexture.create_from_image(Image.load_from_file(path+"/"+data[c]))
 			set(c, texture)
 	_load_layer(data)
 
-func _save_layer(data : Dictionary):
+func _save_layer(_data : Dictionary):
 	pass
 
 func save_layer(path : String) -> Dictionary:
@@ -52,14 +56,13 @@ func save_layer(path : String) -> Dictionary:
 	for c in get_channels():
 		if get(c) != null:
 			var file_name : String = "%s_%d.png" % [ c, index ]
-			var file_path : String = path.plus_file(file_name)
-			var image : Image = get(c).get_data()
-			image.lock()
+			var file_path : String = path.path_join(file_name)
+			var image : Image = get(c).get_image()
+			image.convert(Image.FORMAT_RGBA8)
 			image.save_png(file_path)
-			image.unlock()
 			layer_data[c] = file_name
 	_save_layer(layer_data)
-	if !layers.empty():
+	if !layers.is_empty():
 		layer_data.layers = save_layers(layers, path)
 	return layer_data
 
@@ -70,3 +73,10 @@ static func save_layers(layers_array : Array, path : String) -> Array:
 
 		layers_data.push_back(layer_data)
 	return layers_data
+
+func set_state(s):
+	for c in s.keys():
+		if c in get_channels():
+			get(c).set_image(s[c])
+		else:
+			print("Useless channel %s in layer state" % c)

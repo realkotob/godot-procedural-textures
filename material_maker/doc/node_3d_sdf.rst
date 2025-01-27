@@ -41,6 +41,13 @@ Shapes
 	node_3d_sdf_shapes_capsule
 	node_3d_sdf_shapes_cone
 	node_3d_sdf_shapes_torus
+	node_3d_sdf_shapes_plane
+	node_3d_sdf_shapes_angle
+	node_3d_sdf_shapes_link
+	node_3d_sdf_shapes_hex_prism
+	node_3d_sdf_shapes_cut_sphere
+	node_3d_sdf_shapes_box_frame
+	node_3d_sdf_shapes_solid_angle
 
 Operators
 +++++++++
@@ -57,6 +64,7 @@ Operators
 	node_3d_sdf_operators_extrusion
 	node_3d_sdf_operators_revolution
 	node_3d_sdf_operators_morph
+	node_3d_sdf_operators_sdf_fbm
 
 Transforms
 ++++++++++
@@ -66,6 +74,7 @@ Transforms
 
 	node_3d_sdf_transforms_translate
 	node_3d_sdf_transforms_scale
+	node_3d_sdf_transforms_scale_xyz
 	node_3d_sdf_transforms_rotate
 
 Example images

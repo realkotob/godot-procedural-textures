@@ -1,69 +1,76 @@
 extends MMGraphNodeGeneric
 class_name MMGraphNodeRemote
 
+
+var old_state : Dictionary
+
 var links = {}
 
-onready var grid = $Controls
+
+@onready var grid = $Controls
+
+
+func _ready():
+	super._ready()
 
 func add_control(text : String, control : Control, is_named_param : bool, short_description : String = "", long_description : String = "", is_first : bool = false, is_last : bool = false) -> void:
 	var line_edit : LineEdit = LineEdit.new()
 	line_edit.set_text(control.name)
 	grid.add_child(line_edit)
-	line_edit.connect("text_changed", self, "on_param_name_changed", [ control.name, line_edit ])
-	line_edit.connect("text_entered", self, "on_param_name_entered", [ control.name, line_edit ])
-	line_edit.connect("focus_exited", self, "on_param_name_entered2", [ control.name, line_edit ])
-	var label = preload("res://material_maker/widgets/linked_widgets/editable_label.tscn").instance()
+	line_edit.connect("text_changed", Callable(self, "on_param_name_changed").bind(control.name, line_edit))
+	line_edit.connect("text_submitted", Callable(self, "on_param_name_entered").bind(control.name, line_edit))
+	line_edit.connect("focus_exited", Callable(self, "on_param_name_entered2").bind(control.name, line_edit))
+	var label = preload("res://material_maker/widgets/linked_widgets/editable_label.tscn").instantiate()
 	label.set_text(text)
-	label.connect("label_changed", self, "on_label_changed", [ control.name ])
+	label.connect("label_changed", Callable(self, "on_label_changed").bind(control.name))
 	grid.add_child(label)
-	var description = preload("res://material_maker/widgets/desc_button/desc_button.tscn").instance()
+	var description = preload("res://material_maker/widgets/desc_button/desc_button.tscn").instantiate()
 	description.short_description = short_description
 	description.long_description = long_description
-	description.connect("descriptions_changed", self, "_on_descriptions_changed", [ control.name ])
+	description.connect("descriptions_changed", Callable(self, "_on_descriptions_changed").bind(control.name))
 	grid.add_child(description)
 	grid.add_child(control)
-	control.connect("mouse_entered", self, "on_enter_widget", [ control ])
-	control.connect("mouse_exited", self, "on_exit_widget", [ control ])
-	control.hint_tooltip = ""
+	control.connect("mouse_entered", Callable(self, "on_enter_widget").bind(control))
+	control.connect("mouse_exited", Callable(self, "on_exit_widget").bind(control))
+	control.tooltip_text = ""
 	var button = Button.new()
 	if is_named_param:
 		button.icon = preload("res://material_maker/icons/edit.tres")
 		grid.add_child(button)
-		button.connect("pressed", self, "_on_Edit_pressed", [ control.name ])
-		button.hint_tooltip = "Configure named parameter "+control.name
+		button.connect("pressed", Callable(self, "_on_Edit_pressed").bind(control.name))
+		button.tooltip_text = "Configure named parameter "+control.name
 	else:
 		button.icon = preload("res://material_maker/icons/link.tres")
 		grid.add_child(button)
-		button.connect("pressed", self, "_on_Link_pressed", [ control.name ])
-		button.hint_tooltip = "Link another parameter"
+		button.connect("pressed", Callable(self, "_on_Link_pressed").bind(control.name))
+		button.tooltip_text = "Link another parameter"
 	button = Button.new()
 	button.icon = preload("res://material_maker/icons/remove.tres")
-	button.hint_tooltip = "Remove parameter"
+	button.tooltip_text = "Remove parameter"
 	grid.add_child(button)
-	button.connect("pressed", generator, "remove_parameter", [ control.name ])
+	button.connect("pressed", Callable(self, "remove_parameter").bind(control.name))
 	button = Button.new()
 	button.icon = preload("res://material_maker/icons/up.tres")
-	button.hint_tooltip = "Move parameter up"
+	button.tooltip_text = "Move parameter up"
 	grid.add_child(button)
-	button.connect("pressed", generator, "move_parameter", [ control.name, -1 ])
 	if is_first:
 		button.disabled = true
 	else:
-		button.connect("pressed", generator, "move_parameter", [ control.name, 1 ])
+		button.connect("pressed", Callable(self, "move_parameter").bind(control.name, -1))
 	button = Button.new()
 	button.icon = preload("res://material_maker/icons/down.tres")
-	button.hint_tooltip = "Move parameter down"
+	button.tooltip_text = "Move parameter down"
 	grid.add_child(button)
 	if is_last:
 		button.disabled = true
 	else:
-		button.connect("pressed", generator, "move_parameter", [ control.name, 1 ])
+		button.connect("pressed", Callable(self, "move_parameter").bind(control.name, 1))
 
 func update_node() -> void:
+	await get_tree().process_frame
 	# Show or hide the close button
-	show_close = generator.can_be_deleted()
+	close_button.visible = generator.can_be_deleted()
 	# Delete the contents and wait until it's done
-	yield(get_tree(), "idle_frame")
 	for c in grid.get_children():
 		grid.remove_child(c)
 		c.free()
@@ -92,7 +99,7 @@ func update_node() -> void:
 					control.add_separator()
 					control.add_item("<update "+current+">")
 					control.add_item("<remove "+current+">")
-	rect_size = Vector2(0, 0)
+	size = Vector2(0, 0)
 	initialize_properties()
 
 func _on_value_changed(new_value, variable : String) -> void:
@@ -104,7 +111,7 @@ func _on_value_changed(new_value, variable : String) -> void:
 		var control = controls[variable]
 		if control is OptionButton:
 			if new_value < configuration_count:
-				._on_value_changed(new_value, variable)
+				super._on_value_changed(new_value, variable)
 				var current = control.get_item_text(new_value)
 				control.set_item_text(configuration_count+3, "<update "+current+">")
 				control.set_item_text(configuration_count+4, "<remove "+current+">")
@@ -113,11 +120,9 @@ func _on_value_changed(new_value, variable : String) -> void:
 				var command = new_value - widget.configurations.size()
 				match command:
 					1:
-						var dialog = preload("res://material_maker/windows/line_dialog/line_dialog.tscn").instance()
+						var dialog = preload("res://material_maker/windows/line_dialog/line_dialog.tscn").instantiate()
 						add_child(dialog)
-						var status = dialog.enter_text("Configuration", "Enter a name for the new configuration", "")
-						while status is GDScriptFunctionState:
-							status = yield(status, "completed")
+						var status = await dialog.enter_text("Configuration", "Enter a name for the new configuration", "")
 						if status.ok:
 							generator.add_configuration(variable, status.text)
 					3:
@@ -128,24 +133,47 @@ func _on_value_changed(new_value, variable : String) -> void:
 					_:
 						print(command)
 			return
-	._on_value_changed(new_value, variable)
+	super._on_value_changed(new_value, variable)
+
+func undo_redo_register_change(action_name : String, previous_state : Dictionary):
+	var new_state = generator.serialize().duplicate(true)
+	if new_state.hash() == previous_state.hash():
+		return
+	get_parent().undoredo_create_step(action_name, generator.get_hier_name(), previous_state, new_state)
+		
+func move_parameter(widget_name : String, offset : int) -> void:
+	old_state = generator.serialize().duplicate(true)
+	generator.move_parameter(widget_name, offset)
+	undo_redo_register_change("Move parameter", old_state)
+
+func remove_parameter(widget_name : String) -> void:
+	old_state = generator.serialize().duplicate(true)
+	generator.remove_parameter(widget_name)
+	undo_redo_register_change("Remove parameter", old_state)
 
 func on_param_name_changed(new_name : String, param_name : String, line_edit : LineEdit) -> void:
 	if generator.rename(param_name, new_name, true):
-		line_edit.add_color_override("font_color", get_node("/root/MainWindow").theme.get_color("font_color", "LineEdit"))
+		line_edit.add_theme_color_override("font_color", mm_globals.main_window.theme.get_color("font_color", "LineEdit"))
 	else:
-		line_edit.add_color_override("font_color", Color(1.0, 0.0, 0.0))
+		line_edit.add_theme_color_override("font_color", Color(1.0, 0.0, 0.0))
 
-func on_param_name_entered(new_name : String, param_name : String, line_edit : LineEdit) -> void:
+func on_param_name_entered(new_name : String, param_name : String, _line_edit : LineEdit) -> void:
+	old_state = generator.serialize().duplicate(true)
 	generator.rename(param_name, new_name)
+	undo_redo_register_change("Change parameter name", old_state)
 
 func on_param_name_entered2(param_name : String, line_edit : LineEdit) -> void:
+	old_state = generator.serialize().duplicate(true)
 	on_param_name_entered(line_edit.text, param_name, line_edit)
+	undo_redo_register_change("Change parameter name", old_state)
 
 func on_label_changed(new_label, param_name) -> void:
+	old_state = generator.serialize().duplicate(true)
 	generator.set_label(param_name, new_label)
+	undo_redo_register_change("Change parameter label", old_state)
 
 func _on_descriptions_changed(shortdesc, longdesc, param_name) -> void:
+	old_state = generator.serialize().duplicate(true)
 	var widget = generator.get_widget(param_name)
 	if widget != null:
 		if shortdesc == "":
@@ -156,55 +184,64 @@ func _on_descriptions_changed(shortdesc, longdesc, param_name) -> void:
 			widget.erase("longdesc")
 		else:
 			widget.longdesc = longdesc
+	undo_redo_register_change("Change parameter description", old_state)
+
+func link_parameter(widget_name : String, target_generator : MMGenBase, target_parameter : String) -> void:
+	generator.link_parameter(widget_name, target_generator, target_parameter)
+	undo_redo_register_change("Change parameter name", old_state)
 
 func _on_AddLink_pressed() -> void:
+	old_state = generator.serialize().duplicate(true)
 	var control = generator.create_linked_control("Unnamed")
 	var widget = Control.new()
 	widget.name = control
 	add_control("Unnamed", widget, false)
 	var link = MMNodeLink.new(get_parent())
-	link.pick(widget, generator, control, true)
+	link.pick(widget, self, control, true)
 
 func _on_AddConfig_pressed() -> void:
+	old_state = generator.serialize().duplicate(true)
 	var control = generator.create_config_control("Unnamed")
 	var widget = Control.new()
 	widget.name = control
 	add_control("Unnamed", widget, false)
 	var link = MMNodeLink.new(get_parent())
-	link.pick(widget, generator, control, true)
+	link.pick(widget, self, control, true)
 
 func _on_AddNamed_pressed():
-	var control = generator.create_named_parameter("Unnamed")
+	old_state = generator.serialize().duplicate(true)
+	var _control = generator.create_named_parameter("Unnamed")
 	update_node()
+	undo_redo_register_change("Add named parameter", old_state)
 
 func _on_Link_pressed(param_name) -> void:
 	var link = MMNodeLink.new(get_parent())
 	if controls.has(param_name):
-		link.pick(controls[param_name], generator, param_name)
+		old_state = generator.serialize().duplicate(true)
+		link.pick(controls[param_name], self, param_name)
 
 func _on_Edit_pressed(param_name) -> void:
 	for p in generator.get_parameter_defs():
 		if p.name == param_name:
-			var dialog = preload("res://material_maker/nodes/remote/named_parameter_dialog.tscn").instance()
+			var dialog = preload("res://material_maker/nodes/remote/named_parameter_dialog.tscn").instantiate()
 			add_child(dialog)
-			var result = dialog.configure_param(p.min, p.max, p.step, p.default)
-			while result is GDScriptFunctionState:
-				result = yield(result, "completed")
+			var result = await dialog.configure_param(p.min, p.max, p.step, p.default)
 			if result.keys().size() == 4:
+				old_state = generator.serialize().duplicate(true)
 				generator.configure_named_parameter(param_name, result.min, result.max, result.step, result.default)
-			return
+				undo_redo_register_change("Configure named parameter", old_state)
 
 func _on_Remote_resize_request(new_minsize) -> void:
-	rect_size = new_minsize
+	size = new_minsize
 
 func _on_HBoxContainer_minimum_size_changed() -> void:
-	print("_on_HBoxContainer_minimum_size_changed "+str($HBoxContainer.rect_min_size))
+	print("_on_HBoxContainer_minimum_size_changed "+str($HBoxContainer.custom_minimum_size))
 
 func on_parameter_changed(p, v) -> void:
 	if p == "":
 		update_node()
 	else:
-		.on_parameter_changed(p, v)
+		super.on_parameter_changed(p, v)
 		if generator.name == "gen_parameter" and generator.get_parent() is MMGenBase:
 			generator.get_parent().set_parameter(p, v)
 

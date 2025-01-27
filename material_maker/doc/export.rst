@@ -16,10 +16,6 @@ Godot game engine
 When exporting for the Godot game engine, Material Maker will generate a .tres file that
 describes a fully configured SpatialMaterial.
 
-Note that exporting for Godot is not necessary if you use the Material maker addon, that
-provides an import plugin. This import plugin can either generate a precomputed material,
-or a material that will be rendered at runtime.
-
 Unity game engine
 -----------------
 
@@ -28,34 +24,62 @@ describes a fully configured material. It is thus possible to export materials d
 into one of your project assets directory, and Unity will automatically detect the newly
 exported materials.
 
-Two options are available when exporting for Unity: Unity and UnityHDRP.
+Depending one the Material node type, several Unity targets may be available.
 
 Unreal game engine
 ------------------
 
-When exporting for the Unreal game engine, Material Maker will only generate PNG image
-files, and it is necessary to create the material in Unreal.
+Unreal Engine 4
+^^^^^^^^^^^^^^^
 
-To create a minimal material:
+When exporting for the Unreal game engine version 4.x, Material Maker will only
+generate PNG images and a .mm2ue file. The material must be built manually inside
+the Unreal Engine editor by following the instructions in this file.
 
-* import all PNG files into unreal
-* create a new material using the **Add new -> Material** menu
-* open the new material to edit it
-* drag and drop all textures into the material graph to create a Texture Sample node
-  for each texture
-* connect the RGB output of the albedo *Texture Sample* node to the *Base Color* input
-  of the material node
-* connect the R output of the ORM *Texture Sample* node to the *Ambient Occlusion* input
-  of the material node
-* connect the G output of the ORM *Texture Sample* node to the *Roughness* input
-  of the material node
-* connect the B output of the ORM *Texture Sample* node to the *Metallic* input
-  of the material node
-* connect the RGB output of the normal *Texture Sample* node to the *Normal* input
-  of the material node
+This will generally consist in:
 
-More complex materials can be created, with support for emission textures, depth maps, texture
-coordinate scaling...
+* Copying a material file from the **export** directory in Material Maker installation
+
+* in the newly created material:
+
+  * assigning generated textures
+
+  * copying the shader generated in the .mm2ue file into a Custom node
+
+  * creating new inputs in the custom node and TextureObject nodes, assigning the textures and connecting them
 
 .. image:: images/unreal_export.png
   :align: center
+
+Unreal Engine 5
+^^^^^^^^^^^^^^^
+
+When exporting for the Unreal game engine version 5.x, Material Maker will generate a
+Python script that creates the material in Unreal.
+
+Initial setup
+~~~~~~~~~~~~~
+
+Before exporting a material, it is necessary to configure a python path in Unreal for
+Material Maker:
+
+* in Unreal Engine, open the Project Settings window using the **Edit/Project Settings...** menu
+
+* in this window, type "Python" in the search bar or select the **Plugins/Python** section
+
+* in the **Additional paths** array, add the full path of the **export** directory of your Material Maker installation
+
+* Unreal Engine will prompt to restart. When this is done, the project is ready to import generated materials
+
+.. image:: images/ue5_setup.png
+  :align: center
+
+Exporting materials
+~~~~~~~~~~~~~~~~~~~
+
+When exporting a material for Unreal Engine 5, Material Maker will generate a python script,
+texture files and a shader file, and will store the full path of the script into the clipboard,
+so you just have to paste it into Unreal's 5 Python prompt and execute it to create the material.
+
+When exporting, the target path is not that important (all necessary files will be imported into
+the Unreal project), but the file name will be used as material name.
