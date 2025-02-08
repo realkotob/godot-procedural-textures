@@ -14,6 +14,7 @@ index.
 
 	node_3d_texture_apply
 	node_3d_texture_select
+	node_3d_texture_shape_select
 	node_3d_texture_from2d
 	node_3d_texture_pattern
 	node_3d_texture_fbm
@@ -21,3 +22,6 @@ index.
 	node_3d_texture_colorize
 	node_3d_texture_rotate
 	node_3d_texture_distort
+	node_3d_texture_uniform
+	node_3d_texture_scale
+	node_3d_texture_translate

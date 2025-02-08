@@ -1,164 +1,147 @@
 extends ColorRect
 
-export(String, MULTILINE) var shader_context_defs : String = ""
-export(String, MULTILINE) var shader : String = ""
+@export_multiline var shader_context_defs : String = "" # (String, MULTILINE)
+@export_multiline var shader : String = "" # (String, MULTILINE)
 
 var generator : MMGenBase = null
 var output : int = 0
+var is_greyscale : bool = false
 
 var need_generate : bool = false
 
 var last_export_filename : String = ""
-var last_export_size : int = 0
+var last_export_size = 4
 
-const MENU_EXPORT_AGAIN : int = 1000
 
-func update_export_menu() -> void:
-	$ContextMenu/Export.clear()
-	$ContextMenu/Reference.clear()
-	for i in range(8):
-		var s = 64 << i
-		$ContextMenu/Export.add_item(str(s)+"x"+str(s), i)
-		$ContextMenu/Reference.add_item(str(s)+"x"+str(s), i)
-	$ContextMenu.add_submenu_item("Export", "Export")
-	$ContextMenu.add_item("Export again", MENU_EXPORT_AGAIN)
-	$ContextMenu.set_item_disabled($ContextMenu.get_item_index(MENU_EXPORT_AGAIN), true)
-	$ContextMenu.add_submenu_item("Reference", "Reference")
+signal generator_changed
 
-func set_generator(g : MMGenBase, o : int = 0) -> void:
+
+func generate_preview_shader(source, template) -> String:
+	return MMGenBase.generate_preview_shader(source, source.output_type, template)
+
+func do_update_material(source, target_material : ShaderMaterial, template : String):
+	if source.output_type == "":
+		return
+	is_greyscale = source.output_type == "f"
+	# Update shader
+	if template.find("TIME") != -1:
+		print("Template has time") # This should not happen
+	var code = generate_preview_shader(source, template)
+	mm_deps.create_buffer("preview_"+str(get_instance_id()), self)
+	await mm_deps.buffer_create_shader_material("preview_"+str(get_instance_id()), MMShaderMaterial.new(target_material), code)
+	for u in source.uniforms:
+		if u.value:
+			if u.value is MMTexture:
+				target_material.set_shader_parameter(u.name, await u.value.get_texture())
+			else:
+				target_material.set_shader_parameter(u.name, u.value)
+	# Make sure position/size parameters are setup
+	on_resized()
+
+func update_material(source):
+	do_update_material(source, material, shader_context_defs+get_shader_custom_functions()+shader)
+
+func get_shader_custom_functions():
+	return ""
+
+func set_generator(g : MMGenBase, o : int = 0, force : bool = false) -> void:
 	if !is_visible_in_tree():
 		generator = g
 		output = o
 		need_generate = true
 		return
+	if !force and generator == g and output == o:
+		return
 	need_generate = false
-	if is_instance_valid(generator):
-		generator.disconnect("parameter_changed", self, "on_parameter_changed")
-	var source = MMGenBase.DEFAULT_GENERATED_SHADER
+	if is_instance_valid(generator) and generator.is_connected("parameter_changed",Callable(self,"on_parameter_changed")):
+		generator.disconnect("parameter_changed",Callable(self,"on_parameter_changed"))
+	var source = MMGenBase.get_default_generated_shader()
 	if is_instance_valid(g):
 		generator = g
 		output = o
-		generator.connect("parameter_changed", self, "on_parameter_changed")
+		generator.connect("parameter_changed",Callable(self,"on_parameter_changed"))
 		var gen_output_defs = generator.get_output_defs()
-		if ! gen_output_defs.empty():
+		if ! gen_output_defs.is_empty():
 			var context : MMGenContext = MMGenContext.new()
 			source = generator.get_shader_code("uv", output, context)
-			assert(!(source is GDScriptFunctionState))
-			if source.empty():
-				source = MMGenBase.DEFAULT_GENERATED_SHADER
+			if source.output_type == "":
+				source = MMGenBase.get_default_generated_shader()
 	else:
 		generator = null
-	# Update shader
-	var code = MMGenBase.generate_preview_shader(source, source.type, shader_context_defs+shader)
-	material.shader.code = code
-	# Get parameter values from the shader code
-	MMGenBase.define_shader_float_parameters(material.shader.code, material)
-	# Set texture params
-	if source.has("textures"):
-		for k in source.textures.keys():
-			material.set_shader_param(k, source.textures[k])
-	on_resized()
 
+	generator_changed.emit()
+	update_material(source)
+
+var refreshing_generator : bool = false
 func on_parameter_changed(n : String, v) -> void:
 	if n == "__output_changed__" and output == v:
-		set_generator(generator, output)
+		if ! refreshing_generator and is_inside_tree():
+			refreshing_generator = true
+			await get_tree().process_frame
+			set_generator(generator, output, true)
+			refreshing_generator = false
+		return
 	var p = generator.get_parameter_def(n)
 	if p.has("type"):
 		match p.type:
 			"float", "color", "gradient":
 				pass
 			_:
-				set_generator(generator, output)
+				set_generator(generator, output, true)
 
-func on_float_parameters_changed(parameter_changes : Dictionary) -> void:
-	for n in parameter_changes.keys():
-		for p in VisualServer.shader_get_param_list(material.shader.get_rid()):
-			if p.name == n:
-				material.set_shader_param(n, parameter_changes[n])
-				break
+func set_preview_shader_parameter(parameter_name, value):
+	material.set_shader_parameter(parameter_name, value)
+
+func on_dep_update_value(_buffer_name, parameter_name, value) -> bool:
+	if value is MMTexture:
+		value = await value.get_texture()
+	set_preview_shader_parameter(parameter_name, value)
+	return false
+
 
 func on_resized() -> void:
-	material.set_shader_param("preview_2d_size", rect_size)
+	material.set_shader_parameter("preview_2d_size", size)
 
-func export_again() -> void:
-	if last_export_filename == "":
+
+func export_animation() -> void:
+	if generator == null:
 		return
-	var filename = last_export_filename
-	var extension = filename.get_extension()
-	var regex : RegEx = RegEx.new()
-	regex.compile("(.*)_(\\d+)$")
-	var file : File = File.new()
-	var re_match : RegExMatch = regex.search(filename.get_basename())
-	if re_match != null:
-		var value = re_match.strings[2].to_int()
-		var value_length = re_match.strings[2].length()
-		while true:
-			value += 1
-			filename = "%s_%0*d.%s" % [ re_match.strings[1], value_length, value, extension ]
-			if !file.file_exists(filename):
-				break
-	export_as_image_file(filename, last_export_size)
+	var window = load("res://material_maker/windows/export_animation/export_animation.tscn").instantiate()
+	mm_globals.main_window.add_dialog(window)
+	window.set_source(generator, output)
+	window.exclusive = true
+	window.popup_centered()#e(get_window(), Rect2(get_window().size())
 
-func _on_Export_id_pressed(id : int) -> void:
-	var dialog = FileDialog.new()
-	add_child(dialog)
-	dialog.rect_min_size = Vector2(500, 500)
-	dialog.access = FileDialog.ACCESS_FILESYSTEM
-	dialog.mode = FileDialog.MODE_SAVE_FILE
-	dialog.add_filter("*.png;PNG image file")
-	dialog.add_filter("*.exr;EXR image file")
-	if get_node("/root/MainWindow") != null:
-		var config_cache = get_node("/root/MainWindow").config_cache
-		if config_cache.has_section_key("path", "save_preview"):
-			dialog.current_dir = config_cache.get_value("path", "save_preview")
-	dialog.connect("file_selected", self, "export_as_image_file", [ 64 << id ])
-	dialog.connect("popup_hide", dialog, "queue_free")
-	dialog.popup_centered()
 
-func create_image(renderer_function : String, params : Array, size : int) -> void:
-	var source = MMGenBase.DEFAULT_GENERATED_SHADER
+func export_taa() -> void:
+	if generator == null:
+		return
+	var window = load("res://material_maker/windows/export_taa/export_taa.tscn").instantiate()
+	mm_globals.main_window.add_dialog(window)
+	window.set_source(generator, output)
+	window.popup_centered()
+
+
+func create_image(renderer_function : String, params : Array, image_size : Vector2i) -> void:
 	if generator != null:
-		var gen_output_defs = generator.get_output_defs()
-		if ! gen_output_defs.empty():
-			var context : MMGenContext = MMGenContext.new()
-			source = generator.get_shader_code("uv", output, context)
-			assert(!(source is GDScriptFunctionState))
-			if source.empty():
-				source = MMGenBase.DEFAULT_GENERATED_SHADER
-	# Update shader
-	var tmp_material = ShaderMaterial.new()
-	tmp_material.shader = Shader.new()
-	tmp_material.shader.code = MMGenBase.generate_preview_shader(source, source.type, "uniform vec2 size;void fragment() {COLOR = preview_2d(UV);}")
-	# Set texture params
-	if source.has("textures"):
-		for k in source.textures.keys():
-			tmp_material.set_shader_param(k, source.textures[k])
-	var renderer = mm_renderer.request(self)
-	while renderer is GDScriptFunctionState:
-		renderer = yield(renderer, "completed")
-	renderer = renderer.render_material(self, tmp_material, size, source.type != "rgba")
-	while renderer is GDScriptFunctionState:
-		renderer = yield(renderer, "completed")
-	renderer.callv(renderer_function, params)
-	renderer.release(self)
+		var texture : MMTexture = await generator.render_output_to_texture(output, image_size)
 
-func export_as_image_file(file_name : String, size : int) -> void:
-	var main_window = get_node("/root/MainWindow")
-	if main_window != null:
-		var config_cache = main_window.config_cache
-		config_cache.set_value("path", "save_preview", file_name.get_base_dir())
-	create_image("save_to_file", [ file_name ], size)
+
+func export_as_image_file(file_name : String, image_size : Vector2i) -> void:
+	mm_globals.config.set_value("path", "save_preview", file_name.get_base_dir())
+	if generator != null:
+		var texture : MMTexture = await generator.render_output_to_texture(output, image_size)
+		await texture.save_to_file(file_name)
 	last_export_filename = file_name
-	last_export_size = size
-	$ContextMenu.set_item_disabled($ContextMenu.get_item_index(MENU_EXPORT_AGAIN), false)
+	last_export_size = image_size
 
-func _on_Reference_id_pressed(id : int):
-	var texture : ImageTexture = ImageTexture.new()
-	var status = create_image("copy_to_texture", [ texture ], 64 << id)
-	while status is GDScriptFunctionState:
-		status = yield(status, "completed")
-	get_node("/root/MainWindow").get_panel("Reference").add_reference(texture)
+
+func export_to_reference(image_size : Vector2i):
+	if generator != null:
+		var texture : MMTexture = await generator.render_output_to_texture(output, image_size)
+		mm_globals.main_window.get_panel("Reference").add_reference(await texture.get_texture())
+
 
 func _on_Preview2D_visibility_changed():
 	if need_generate and is_visible_in_tree():
-		set_generator(generator, output)
+		set_generator(generator, output, true)

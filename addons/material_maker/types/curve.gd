@@ -1,4 +1,4 @@
-extends Object
+extends RefCounted
 class_name MMCurve
 
 class Point:
@@ -9,17 +9,19 @@ class Point:
 		p = Vector2(x, y)
 		ls = nls
 		rs = nrs
+	func compare(point) -> bool:
+		return p == point.p and ls == point.ls and rs == point.rs
 
 var points = [ Point.new(0.0, 0.0, 0.0, 1.0), Point.new(1.0, 1.0, 1.0, 0.0) ]
 
 func to_string() -> String:
-	var rv = PoolStringArray()
+	var rv = PackedStringArray()
 	for p in points:
 		rv.append("("+str(p.x)+","+str(p.y)+","+str(p.ls)+","+str(p.rs)+")")
-	return rv.join(",")
+	return ",".join(rv)
 
-func duplicate() -> Object:
-	var copy = get_script().new()
+func duplicate() -> MMCurve:
+	var copy = MMCurve.new()
 	copy.clear()
 	for p in points:
 		copy.add_point(p.p.x, p.p.y, p.ls, p.rs)
@@ -28,13 +30,21 @@ func duplicate() -> Object:
 func clear() -> void:
 	points.clear()
 
+func compare(curve) -> bool:
+	if curve.points.size() != points.size():
+		return false
+	for i in points.size():
+		if ! points[i].compare(curve.points[i]):
+			return false
+	return true
+
 func add_point(x : float, y : float, ls : float = INF, rs : float = INF) -> void:
 	for i in points.size():
 		if x < points[i].p.x:
 			if ls == INF:
-				ls == 0
+				ls = 0
 			if rs == INF:
-				rs == 0
+				rs = 0
 			points.insert(i, Point.new(x, y, ls, rs))
 			return
 	points.append(Point.new(x, y, ls, rs))
@@ -43,7 +53,7 @@ func remove_point(index : int) -> bool:
 	if index <= 0 or index >= points.size() - 1:
 		return false
 	else:
-		points.remove(index)
+		points.remove_at(index)
 	return true
 
 func get_point_count() -> int:
@@ -65,7 +75,9 @@ func get_shader(name) -> String:
 	var shader
 	shader = "float "+name+"_curve_fct(float x) {\n"
 	for i in range(points.size()-1):
-		shader += "if (x <= p_"+name+"_"+str(i+1)+"_x) {\n"
+		if i < points.size()-2:
+			shader += "if (x <= p_"+name+"_"+str(i+1)+"_x) "
+		shader += "{\n"
 		shader += "float dx = x - p_"+name+"_"+str(i)+"_x;\n"
 		shader += "float d = p_"+name+"_"+str(i+1)+"_x - p_"+name+"_"+str(i)+"_x;\n"
 		shader += "float t = dx/d;\n"

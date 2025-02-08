@@ -15,9 +15,20 @@
 		"row_offset": 0.5,
 		"rows": 6
 	},
+	"seed_int": 0,
 	"shader_model": {
-		"code": "vec4 $(name_uv)_rect = bricks_$pattern($uv, vec2($columns, $rows), $repeat, $row_offset);\nvec4 $(name_uv) = brick($uv, $(name_uv)_rect.xy, $(name_uv)_rect.zw, $mortar*$mortar_map($uv), $round*$round_map($uv), max(0.001, $bevel*$bevel_map($uv)));\n",
-		"global": "vec3 brick_infinite_random_color(vec2 bmin, vec2 bmax, float seed) {\n\tvec2 center = 0.5*(bmin + bmax);\n\treturn rand3(center + vec2(seed));\n}\n",
+		"code": [
+			"vec4 $(name_uv)_rect = bricks_$pattern($uv, vec2($columns, $rows), $repeat, $row_offset);",
+			"vec4 $(name_uv) = brick($uv, $(name_uv)_rect.xy, $(name_uv)_rect.zw, $mortar*$mortar_map($uv), $round*$round_map($uv), max(0.001, $bevel*$bevel_map($uv)));",
+			""
+		],
+		"global": [
+			"vec3 brick_infinite_random_color(vec2 bmin, vec2 bmax, float seed) {",
+			"\tvec2 center = 0.5*(bmin + bmax);",
+			"\treturn rand3(center + vec2(seed));",
+			"}",
+			""
+		],
 		"includes": [
 			"bricks"
 		],
@@ -128,7 +139,7 @@
 			{
 				"control": "None",
 				"default": 1,
-				"label": "Repeat:",
+				"label": "Repeat",
 				"longdesc": "The number of repetitions of the whole pattern",
 				"max": 8,
 				"min": 1,
@@ -140,7 +151,7 @@
 			{
 				"control": "None",
 				"default": 6,
-				"label": "Rows:",
+				"label": "Rows",
 				"longdesc": "The number of rows of a pattern",
 				"max": 64,
 				"min": 1,
@@ -152,7 +163,7 @@
 			{
 				"control": "None",
 				"default": 3,
-				"label": "Columns:",
+				"label": "Columns",
 				"longdesc": "The number of columns of a pattern",
 				"max": 64,
 				"min": 1,
@@ -164,7 +175,7 @@
 			{
 				"control": "None",
 				"default": 0.5,
-				"label": "Offset:",
+				"label": "Offset",
 				"longdesc": "The offset of the pattern (not useful for all patterns)",
 				"max": 1,
 				"min": 0,
@@ -176,7 +187,7 @@
 			{
 				"control": "None",
 				"default": 0.1,
-				"label": "Mortar:",
+				"label": "Mortar",
 				"longdesc": "The width of the space between bricks",
 				"max": 0.5,
 				"min": 0,
@@ -188,7 +199,7 @@
 			{
 				"control": "None",
 				"default": 0.1,
-				"label": "Bevel:",
+				"label": "Bevel",
 				"longdesc": "The width of the edge of each brick",
 				"max": 0.5,
 				"min": 0,
@@ -200,7 +211,7 @@
 			{
 				"control": "None",
 				"default": 0,
-				"label": "Round:",
+				"label": "Round",
 				"longdesc": "The radius of the round corners of bricks",
 				"max": 0.5,
 				"min": 0,
@@ -212,7 +223,7 @@
 			{
 				"control": "None",
 				"default": 0.1,
-				"label": "Corner:",
+				"label": "Corner",
 				"longdesc": "The size of the corner part of each brick (only used by the Corner UV output)",
 				"max": 0.5,
 				"min": 0,

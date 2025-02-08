@@ -20,9 +20,9 @@ The **Tiler** node accepts two inputs:
 Outputs
 +++++++
 
-The **Tiler** node outputs the splat image.
+The **Tiler** node outputs the splat image and a secondary output that assigns a random color to each tile.
 
-The greyscale tiler has a secondary output that assigns a random color to each tile.
+The greyscale tiler has a third output that assigns a UV layout to each tile.
 
 Parameters
 ++++++++++
@@ -39,6 +39,8 @@ The **Tiler** node accepts the following parameters:
 * *RndRotate* is the maximum angle of the random rotation applied to each instance.
 * *RndScale* is the amount of random scaling applied to each instance.
 * *RndValue* is the amount of random value applied to each instance.
+* *Variations*: if checked, the node will tile different variations of its input
+  (i.e. roll a different seed for each instance)
 
 Example images
 ++++++++++++++

@@ -1,6 +1,6 @@
 extends "res://material_maker/widgets/float_edit/float_edit.gd"
 
-export var config_variable : String
+@export var config_variable : String
 
 func _ready() -> void:
 	pass
@@ -10,4 +10,4 @@ func init_from_config(config : ConfigFile) -> void:
 		set_value(config.get_value("config", config_variable))
 
 func update_config(config : ConfigFile) -> void:
-	config.set_value("config", config_variable, value)
+	config.set_value("config", config_variable, get_value())

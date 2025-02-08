@@ -9,6 +9,7 @@
 		"cy": 0,
 		"scale": 1.98
 	},
+	"seed_int": 0,
 	"shader_model": {
 		"code": "",
 		"global": "",
@@ -45,7 +46,7 @@
 			{
 				"control": "P1.x",
 				"default": 0,
-				"label": "Center X:",
+				"label": "Center X",
 				"longdesc": "X coordinate of the magnifying glass center",
 				"max": 0.5,
 				"min": -0.5,
@@ -57,7 +58,7 @@
 			{
 				"control": "P1.y",
 				"default": 0,
-				"label": "Center Y:",
+				"label": "Center Y",
 				"longdesc": "Y coordinate of the magnifying glass center",
 				"max": 0.5,
 				"min": -0.5,
@@ -69,7 +70,7 @@
 			{
 				"control": "None",
 				"default": 1,
-				"label": "Scale:",
+				"label": "Scale",
 				"longdesc": "The maximum scaling factor for the magnifying glass",
 				"max": 10,
 				"min": 0,

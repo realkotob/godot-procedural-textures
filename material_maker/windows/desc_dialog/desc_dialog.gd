@@ -1,13 +1,16 @@
-extends WindowDialog
+extends Window
+
 
 signal close(apply)
 
+
 func edit_descriptions(type : String, short : String, long : String) -> Array:
-	window_title = type+" Description"
+	title = type+" Description"
 	$VBoxContainer/HBoxContainer/ShortDesc.text = short
 	$VBoxContainer/LongDesc.text = long
+	_on_WindowDialog_minimum_size_changed()
 	popup_centered()
-	if yield(self, "close"):
+	if await self.close:
 		short = $VBoxContainer/HBoxContainer/ShortDesc.text
 		long = $VBoxContainer/LongDesc.text
 	queue_free()
@@ -21,3 +24,7 @@ func _on_Cancel_pressed():
 
 func _on_WindowDialog_popup_hide():
 	emit_signal("close", false)
+
+
+func _on_WindowDialog_minimum_size_changed():
+	size = $VBoxContainer.size+Vector2(4, 4)
